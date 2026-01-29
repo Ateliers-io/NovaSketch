@@ -1,0 +1,61 @@
+# ======================
+# Dependencies
+# ======================
+node_modules/
+.pnpm-store/
+
+# ======================
+# Environment variables
+# ======================
+.env
+.env.*
+!.env.example
+
+# ======================
+# Logs
+# ======================
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# ======================
+# Runtime / cache
+# ======================
+.cache/
+.tmp/
+.temp/
+
+# ======================
+# Coverage & test output
+# ======================
+coverage/
+.nyc_output/
+
+# ======================
+# Build output (future-proof)
+# ======================
+dist/
+build/
+
+# ======================
+# Docker
+# ======================
+*.pid
+docker-data/
+docker-volumes/
+
+# ======================
+# OS / Editor junk
+# ======================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ======================
+# Misc
+# ======================
+eslint-report.html
