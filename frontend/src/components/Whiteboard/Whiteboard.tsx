@@ -9,6 +9,7 @@ const GRID_COLOR = '#e0e0e0';
 const STROKE_TENSION = 0.4; // bezier curve smoothing (0 = sharp, 1 = very smooth)
 const MIN_POINT_DISTANCE = 3; // skip points closer than this to reduce jitter
 const DEFAULT_BRUSH_SIZE = 3;
+const DEFAULT_STROKE_COLOR = '#000000';
 
 interface StrokeLine {
   id: string;
@@ -56,7 +57,10 @@ export default function Whiteboard() {
 
   const [lines, setLines] = useState<StrokeLine[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
+
+  // Drawing context - stores current tool settings
   const [brushSize, setBrushSize] = useState(DEFAULT_BRUSH_SIZE);
+  const [strokeColor, setStrokeColor] = useState(DEFAULT_STROKE_COLOR); // hex code
 
   useEffect(() => {
     function handleResize() {
@@ -73,7 +77,7 @@ export default function Whiteboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Start a new stroke
+  // Start a new stroke with current tool settings
   const handlePointerDown = (e: KonvaEventObject<PointerEvent>) => {
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
@@ -85,7 +89,7 @@ export default function Whiteboard() {
       {
         id: `stroke-${Date.now()}`,
         points: [pos.x, pos.y],
-        color: '#000000',
+        color: strokeColor, // Apply selected color to new stroke
         strokeWidth: brushSize,
       },
     ]);
@@ -129,7 +133,12 @@ export default function Whiteboard() {
 
   return (
     <div className="whiteboard-container" ref={containerRef}>
-      <Toolbar brushSize={brushSize} onBrushSizeChange={setBrushSize} />
+      <Toolbar
+        brushSize={brushSize}
+        onBrushSizeChange={setBrushSize}
+        strokeColor={strokeColor}
+        onColorChange={setStrokeColor}
+      />
       <Stage
         width={dimensions.width}
         height={dimensions.height}
@@ -141,12 +150,13 @@ export default function Whiteboard() {
         <Layer>
           <Grid width={dimensions.width} height={dimensions.height} />
         </Layer>
+        {/* Render strokes with their stored color */}
         <Layer>
           {lines.map((line) => (
             <Line
               key={line.id}
               points={line.points}
-              stroke={line.color}
+              stroke={line.color} // Each stroke uses its own color
               strokeWidth={line.strokeWidth}
               lineCap="round"
               lineJoin="round"
