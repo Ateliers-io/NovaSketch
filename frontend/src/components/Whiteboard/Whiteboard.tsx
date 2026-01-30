@@ -124,43 +124,133 @@ function eraseAtPosition(
 
   for (const stroke of strokes) {
     const points = stroke.points;
-    let currentSegment: number[] = [];
+    let currentLinePoints: number[] = [];
     let segmentCount = 0;
 
-    // Check each point in the stroke
-    for (let i = 0; i < points.length; i += 2) {
-      const px = points[i];
-      const py = points[i + 1];
-      const dist = Math.sqrt((px - x) ** 2 + (py - y) ** 2);
-
-      if (dist > eraserRadius) {
-        // Point is outside eraser radius, keep it
-        currentSegment.push(px, py);
-      } else {
-        // Point is inside eraser radius, save current segment and start new one
-        if (currentSegment.length >= 4) {
-          result.push({
-            ...stroke,
-            id: `${stroke.id}-${segmentCount++}`,
-            points: [...currentSegment],
-          });
-        }
-        currentSegment = [];
+    // Helper to finish current line and start a new one
+    const finishLine = () => {
+      if (currentLinePoints.length >= 4) {
+        result.push({
+          ...stroke,
+          id: `${stroke.id}-${segmentCount++}`,
+          points: [...currentLinePoints],
+        });
       }
+      currentLinePoints = [];
+    };
+
+    if (points.length < 4) {
+      // Keep tiny lines intact if they are far away (simplification)
+      // Or check center point.
+      result.push(stroke);
+      continue;
     }
 
-    // Save remaining segment
-    if (currentSegment.length >= 4) {
-      result.push({
-        ...stroke,
-        id: segmentCount > 0 ? `${stroke.id}-${segmentCount}` : stroke.id,
-        points: currentSegment,
-      });
+    // Start with the first point
+    let px = points[0];
+    let py = points[1];
+
+    // Check if start point is outside
+    if (!isPointInCircle(px, py, x, y, eraserRadius)) {
+      currentLinePoints.push(px, py);
     }
+
+    // Iterate through all subsequent points form segments
+    for (let i = 2; i < points.length; i += 2) {
+      const cx = points[i];
+      const cy = points[i + 1];
+
+      const p1 = { x: px, y: py };
+      const p2 = { x: cx, y: cy };
+
+      // Calculate intersections between segment p1-p2 and circle
+      const intersections = getSegmentCircleIntersections(p1, p2, { x, y }, eraserRadius);
+
+      if (intersections.length === 0) {
+        // No intersection. 
+        if (!isPointInCircle(cx, cy, x, y, eraserRadius)) {
+          // p2 is outside. And no intersection means p1 was outside too (or path didn't cross).
+          currentLinePoints.push(cx, cy);
+        } else {
+          // p2 is inside. p1 must have been inside too (or close enough).
+          finishLine();
+        }
+      } else {
+        // We have intersections!
+        // Sort intersections by distance from p1 to handle order correctly
+        intersections.sort((a, b) => distSq(p1, a) - distSq(p1, b));
+
+        for (const intersect of intersections) {
+          if (currentLinePoints.length > 0) {
+            // We are entering the circle (Eraser) -> Cut here
+            currentLinePoints.push(intersect.x, intersect.y);
+            finishLine();
+          } else {
+            // We are exiting the circle -> Start new line here
+            currentLinePoints.push(intersect.x, intersect.y);
+          }
+        }
+
+        // Finally handle the end point p2
+        if (!isPointInCircle(cx, cy, x, y, eraserRadius)) {
+          currentLinePoints.push(cx, cy);
+        }
+      }
+
+      // Update prev point
+      px = cx;
+      py = cy;
+    }
+
+    finishLine();
   }
 
   return result;
 }
+
+function distSq(p1: { x: number, y: number }, p2: { x: number, y: number }) {
+  return (p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2;
+}
+
+// Math helper: Find intersection of line segment p1-p2 and circle (center c, radius r)
+function getSegmentCircleIntersections(p1: { x: number, y: number }, p2: { x: number, y: number }, c: { x: number, y: number }, r: number) {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+
+  const fx = p1.x - c.x;
+  const fy = p1.y - c.y;
+
+  const a = dx * dx + dy * dy;
+  const b = 2 * (fx * dx + fy * dy);
+  const C = (fx * fx + fy * fy) - r * r;
+
+  let discriminant = b * b - 4 * a * C;
+
+  const intersections = [];
+
+  if (discriminant >= 0) {
+    // Handle floating point precision safely
+    if (a === 0) return []; // Segment is a point
+
+    const sqrtDisc = Math.sqrt(discriminant);
+    const t1 = (-b - sqrtDisc) / (2 * a);
+    const t2 = (-b + sqrtDisc) / (2 * a);
+
+    if (t1 >= 0 && t1 <= 1) {
+      intersections.push({ x: p1.x + t1 * dx, y: p1.y + t1 * dy });
+    }
+    if (t2 >= 0 && t2 <= 1) {
+      intersections.push({ x: p1.x + t2 * dx, y: p1.y + t2 * dy });
+    }
+  }
+
+  return intersections;
+}
+
+function isPointInCircle(px: number, py: number, cx: number, cy: number, r: number) {
+  return (px - cx) ** 2 + (py - cy) ** 2 < r ** 2;
+}
+
 
 export default function Whiteboard() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -213,7 +303,7 @@ export default function Whiteboard() {
         }
       } else {
         // Partial mode: erase parts of strokes
-        setLines(eraseAtPosition(pos.x, pos.y, lines, eraserSize));
+        setLines(eraseAtPosition(pos.x, pos.y, lines, eraserSize / 2));
       }
     } else {
       // Start a new stroke with current tool settings
@@ -251,7 +341,7 @@ export default function Whiteboard() {
           setLines((prev) => prev.filter((line) => line.id !== hitId));
         }
       } else {
-        setLines((prev) => eraseAtPosition(pos.x, pos.y, prev, eraserSize));
+        setLines((prev) => eraseAtPosition(pos.x, pos.y, prev, eraserSize / 2));
       }
       return;
     }
