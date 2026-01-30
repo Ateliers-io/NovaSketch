@@ -1,4 +1,4 @@
-import { Stage, Layer, Line } from 'react-konva';
+import { Stage, Layer, Line, Circle } from 'react-konva';
 import { useRef, useState, useEffect } from 'react';
 import type { KonvaEventObject } from 'konva/lib/Node';
 import Toolbar from '../Toolbar';
@@ -178,6 +178,9 @@ export default function Whiteboard() {
   const [eraserMode, setEraserMode] = useState<EraserMode>('stroke');
   const [eraserSize, setEraserSize] = useState(DEFAULT_ERASER_SIZE);
 
+  // Cursor tracking for custom eraser cursor
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     function handleResize() {
       if (containerRef.current) {
@@ -232,6 +235,13 @@ export default function Whiteboard() {
     const stage = e.target.getStage();
     const pos = stage?.getPointerPosition();
     if (!pos) return;
+
+    // Track cursor for custom eraser URL
+    if (activeTool === 'eraser') {
+      setCursorPos(pos);
+    } else {
+      setCursorPos(null);
+    }
 
     if (activeTool === 'eraser' && e.evt.buttons === 1) {
       // Erase while dragging (mouse button held)
@@ -296,8 +306,11 @@ export default function Whiteboard() {
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        style={{ cursor: activeTool === 'eraser' ? 'crosshair' : 'default' }}
+        onPointerLeave={() => {
+          handlePointerUp();
+          setCursorPos(null);
+        }}
+        style={{ cursor: activeTool === 'eraser' ? 'none' : 'default' }} // Hide default cursor for eraser
       >
         <Layer>
           <Grid width={dimensions.width} height={dimensions.height} />
@@ -315,6 +328,18 @@ export default function Whiteboard() {
               tension={STROKE_TENSION}
             />
           ))}
+          {/* Custom Eraser Cursor - circle indicator */}
+          {activeTool === 'eraser' && cursorPos && (
+            <Circle
+              x={cursorPos.x}
+              y={cursorPos.y}
+              radius={eraserSize / 2}
+              stroke="#333"
+              strokeWidth={1}
+              fill="rgba(255, 255, 255, 0.3)"
+              listening={false}
+            />
+          )}
         </Layer>
       </Stage>
     </div>

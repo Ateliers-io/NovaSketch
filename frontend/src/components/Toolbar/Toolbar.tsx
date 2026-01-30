@@ -65,14 +65,20 @@ export default function Toolbar({
                             <div className="eraser-modes">
                                 <button
                                     className={`eraser-mode-btn ${eraserMode === 'partial' ? 'active' : ''}`}
-                                    onClick={() => onEraserModeChange('partial')}
+                                    onClick={() => {
+                                        onEraserModeChange('partial');
+                                        setShowEraserMenu(false); // Close dropdown after selection
+                                    }}
                                     title="Partial eraser - erase parts of strokes"
                                 >
                                     ✂️ Partial
                                 </button>
                                 <button
                                     className={`eraser-mode-btn ${eraserMode === 'stroke' ? 'active' : ''}`}
-                                    onClick={() => onEraserModeChange('stroke')}
+                                    onClick={() => {
+                                        onEraserModeChange('stroke');
+                                        setShowEraserMenu(false); // Close dropdown after selection
+                                    }}
                                     title="Stroke eraser - delete entire stroke"
                                 >
                                     🗑️ Stroke
