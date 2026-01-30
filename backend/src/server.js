@@ -24,6 +24,8 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server });
 
 // Middleware
+import cors from "cors";
+app.use(cors());
 app.use(express.json());
 
 // Routes
