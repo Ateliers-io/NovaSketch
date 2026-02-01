@@ -1,88 +1,85 @@
-.svg-shape-renderer {
+/* --- ENGINEERING PALETTE --- */
+:root {
+    --neon-primary: #66FCF1;
+    --neon-secondary: #45A29E;
+    --graphite-surface: #1F2833;
+    --alert-coral: #fb7185;
+}
+
+/* --- BASE LAYER --- */
+.svg-renderer-layer {
     position: absolute;
     top: 0;
     left: 0;
-    pointer-events: none;
+    pointer-events: none; /* Let clicks pass through empty space */
     overflow: visible;
 }
 
-.svg-shape {
-    pointer-events: auto;
-    transition: filter 0.15s ease-in-out, transform 0.1s ease-out;
-}
-
-.svg-shape:hover {
-    filter: brightness(1.05);
-}
-
-.svg-shape--selected {
-    filter: url(#selection-glow);
-    stroke-dasharray: none !important;
-}
-
-.svg-rectangle:hover,
-.svg-circle:hover,
-.svg-ellipse:hover,
-.svg-triangle:hover {
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.15));
-}
-
-.svg-line:hover,
-.svg-arrow:hover {
-    stroke-width: calc(var(--stroke-width, 2px) + 1px);
-}
-
-.svg-shape[data-shape-id] {
+/* --- SHAPE GROUPS --- */
+.svg-shape-group {
+    pointer-events: auto; /* Catch clicks on shapes */
     cursor: pointer;
+    transition: opacity 0.2s ease;
+    transform-origin: center;
 }
 
-@keyframes shape-appear {
+/* --- PRIMITIVE ELEMENTS (The actual rect/circle/etc) --- */
+.svg-primitive {
+    transition: 
+        stroke 0.2s ease, 
+        stroke-width 0.2s ease, 
+        filter 0.2s ease;
+    vector-effect: non-scaling-stroke; /* Keep stroke crisp when scaling */
+}
+
+/* Hover Effect: Brighten and slight bloom */
+.svg-shape-group:hover .svg-primitive {
+    filter: drop-shadow(0 0 4px var(--neon-secondary));
+    stroke: var(--neon-primary);
+}
+
+/* --- SELECTION RETICLE (The "CAD" Box) --- */
+.selection-reticle {
+    pointer-events: none;
+    animation: reticle-lock-on 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.reticle-box {
+    fill: none;
+    stroke: var(--neon-secondary);
+    stroke-width: 1px;
+    stroke-dasharray: 4, 4; /* Blueprint style */
+    opacity: 0.5;
+}
+
+.reticle-corner {
+    fill: none;
+    stroke: var(--neon-primary);
+    stroke-width: 2px;
+    filter: drop-shadow(0 0 2px var(--neon-primary));
+}
+
+/* Animation: Reticle snaps into place */
+@keyframes reticle-lock-on {
     from {
         opacity: 0;
-        transform: scale(0.9);
+        transform: scale(1.1);
     }
-
     to {
         opacity: 1;
         transform: scale(1);
     }
 }
 
-.svg-shape-new {
-    animation: shape-appear 0.2s ease-out forwards;
+/* --- SELECTED STATE --- */
+.svg-shape-group.selected .svg-primitive {
+    /* Optional: Add a subtle texture to selected filled shapes */
+    /* fill: url(#tech-grid);  <-- Uncomment to enable tech texture on selection */
+    filter: url(#neon-bloom);
 }
 
-.svg-selection-handles {
-    pointer-events: auto;
-}
-
-.svg-selection-handle {
-    fill: #ffffff;
-    stroke: #3B82F6;
-    stroke-width: 2;
-    cursor: grab;
-    transition: transform 0.1s ease;
-}
-
-.svg-selection-handle:hover {
-    transform: scale(1.2);
-}
-
-.svg-selection-handle:active {
+/* --- DRAGGING STATE (Optional if you add drag class) --- */
+.svg-shape-group.dragging {
+    opacity: 0.8;
     cursor: grabbing;
-}
-
-.svg-rotation-handle {
-    fill: #3B82F6;
-    stroke: #1E40AF;
-    stroke-width: 1;
-    cursor: grab;
-}
-
-.svg-selection-box {
-    fill: none;
-    stroke: #3B82F6;
-    stroke-width: 1;
-    stroke-dasharray: 5, 5;
-    pointer-events: none;
 }
